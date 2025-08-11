@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的收藏 - UniHome</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <style>
+        .favorite-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .favorite-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-2">
+                        <img src="/static/images/icon_lg.png" alt="UniHome" class="h-8 w-8">
+                        <span class="text-xl font-bold text-gray-800">UniHome</span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-home mr-1"></i>首页
+                    </a>
+                    <a href="/favorites" class="text-indigo-600 hover:text-indigo-800 px-3 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-heart mr-1"></i>我的收藏
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 页面标题 -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">我的收藏</h1>
+            <p class="text-gray-600">管理您收藏的房源</p>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="flex justify-center items-center py-12">
+            <div class="loading-spinner"></div>
+            <span class="ml-3 text-gray-600">加载中...</span>
+        </div>
+
+        <!-- 收藏列表 -->
+        <div id="favorites-container" class="hidden">
+            <!-- 统计信息 -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">收藏统计</h2>
+                        <p class="text-gray-600">您总共收藏了 <span id="total-count" class="font-bold text-indigo-600">0</span> 个房源</p>
+                    </div>
+                    <div class="text-right">
+                        <button onclick="clearAllFavorites()" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                            <i class="fas fa-trash mr-1"></i>清空收藏
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 房源列表 -->
+            <div id="favorites-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 收藏的房源卡片将在这里动态生成 -->
+            </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div id="empty-state" class="hidden text-center py-12">
+            <div class="max-w-md mx-auto">
+                <i class="fas fa-heart text-gray-300 text-6xl mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">还没有收藏任何房源</h3>
+                <p class="text-gray-600 mb-6">浏览房源并点击收藏按钮来添加您喜欢的房源</p>
+                <a href="/" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-200">
+                    <i class="fas fa-search mr-2"></i>浏览房源
+                </a>
+            </div>
+        </div>
+
+        <!-- 错误状态 -->
+        <div id="error-state" class="hidden text-center py-12">
+            <div class="max-w-md mx-auto">
+                <i class="fas fa-exclamation-triangle text-red-300 text-6xl mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">加载失败</h3>
+                <p class="text-gray-600 mb-6">无法加载收藏列表，请稍后再试</p>
+                <button onclick="loadFavorites()" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-200">
+                    <i class="fas fa-redo mr-2"></i>重新加载
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 确认删除模态框 -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">确认删除</h3>
+            <p class="text-gray-600 mb-6">确定要取消收藏这个房源吗？</p>
+            <div class="flex space-x-4">
+                <button onclick="closeConfirmModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition duration-200">
+                    取消
+                </button>
+                <button onclick="confirmRemoveFavorite()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200">
+                    确定删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let favorites = [];
+        let currentRemoveId = null;
+
+        // 页面加载时获取收藏列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFavorites();
+        });
+
+        // 加载收藏列表
+        async function loadFavorites() {
+            try {
+                showLoading();
+                
+                const response = await fetch('/api/favorites');
+                const data = await response.json();
+
+                if (data.success) {
+                    favorites = data.data;
+                    renderFavorites();
+                } else {
+                    if (data.need_login) {
+                        // 重定向到首页并提示登录
+                        window.location.href = '/?login=required';
+                    } else {
+                        showError();
+                    }
+                }
+            } catch (error) {
+                console.error('加载收藏列表失败:', error);
+                showError();
+            }
+        }
+
+        // 渲染收藏列表
+        function renderFavorites() {
+            const container = document.getElementById('favorites-container');
+            const list = document.getElementById('favorites-list');
+            const totalCount = document.getElementById('total-count');
+            
+            hideAllStates();
+
+            if (favorites.length === 0) {
+                showEmpty();
+                return;
+            }
+
+            // 更新统计
+            totalCount.textContent = favorites.length;
+
+            // 渲染房源卡片
+            list.innerHTML = favorites.map(favorite => {
+                const property = favorite.property;
+                if (!property) return '';
+
+                return `
+                    <div class="favorite-card bg-white rounded-lg shadow overflow-hidden">
+                        <div class="relative">
+                            <img src="${property.images && property.images.length > 0 ? property.images[0] : '/static/images/default-property.jpg'}" 
+                                 alt="${property.name}" 
+                                 class="w-full h-48 object-cover">
+                            <div class="absolute top-2 right-2">
+                                <button onclick="removeFavorite(${favorite.property_id})" 
+                                        class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition duration-200">
+                                    <i class="fas fa-heart text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">${property.name}</h3>
+                            <p class="text-gray-600 text-sm mb-2">
+                                <i class="fas fa-map-marker-alt mr-1"></i>${property.location}
+                            </p>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-2xl font-bold text-indigo-600">
+                                    ${property.currency === 'CAD' ? 'C$' : '¥'}${property.price}
+                                </span>
+                                <span class="text-sm text-gray-500">/${property.price_unit}</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="viewProperty(${property.id})" 
+                                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md text-sm font-medium transition duration-200">
+                                    查看详情
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.classList.remove('hidden');
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            hideAllStates();
+            document.getElementById('loading').classList.remove('hidden');
+        }
+
+        // 显示空状态
+        function showEmpty() {
+            hideAllStates();
+            document.getElementById('empty-state').classList.remove('hidden');
+        }
+
+        // 显示错误状态
+        function showError() {
+            hideAllStates();
+            document.getElementById('error-state').classList.remove('hidden');
+        }
+
+        // 隐藏所有状态
+        function hideAllStates() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('favorites-container').classList.add('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+        }
+
+        // 查看房源详情
+        function viewProperty(propertyId) {
+            window.location.href = `/#detail-${propertyId}`;
+        }
+
+        // 移除收藏
+        function removeFavorite(propertyId) {
+            currentRemoveId = propertyId;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            document.getElementById('confirm-modal').classList.add('flex');
+        }
+
+        // 关闭确认模态框
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            document.getElementById('confirm-modal').classList.remove('flex');
+            currentRemoveId = null;
+        }
+
+        // 确认移除收藏
+        async function confirmRemoveFavorite() {
+            if (!currentRemoveId) return;
+
+            try {
+                const response = await fetch(`/api/favorites/${currentRemoveId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 从列表中移除
+                    favorites = favorites.filter(f => f.property_id !== currentRemoveId);
+                    renderFavorites();
+                    showMessage('取消收藏成功', 'success');
+                } else {
+                    showMessage(data.message || '取消收藏失败', 'error');
+                }
+            } catch (error) {
+                console.error('取消收藏失败:', error);
+                showMessage('取消收藏失败，请稍后再试', 'error');
+            } finally {
+                closeConfirmModal();
+            }
+        }
+
+        // 清空所有收藏
+        async function clearAllFavorites() {
+            if (favorites.length === 0) return;
+            
+            if (!confirm(`确定要清空所有 ${favorites.length} 个收藏吗？此操作不可恢复。`)) {
+                return;
+            }
+
+            try {
+                // 批量删除所有收藏
+                const deletePromises = favorites.map(favorite => 
+                    fetch(`/api/favorites/${favorite.property_id}`, { method: 'DELETE' })
+                );
+                
+                await Promise.all(deletePromises);
+                
+                favorites = [];
+                renderFavorites();
+                showMessage('已清空所有收藏', 'success');
+            } catch (error) {
+                console.error('清空收藏失败:', error);
+                showMessage('清空收藏失败，请稍后再试', 'error');
+            }
+        }
+
+        // 显示消息提示
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all duration-300 transform translate-x-full`;
+            
+            if (type === 'success') {
+                messageDiv.className += ' bg-green-500';
+            } else if (type === 'error') {
+                messageDiv.className += ' bg-red-500';
+            } else {
+                messageDiv.className += ' bg-blue-500';
+            }
+            
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                messageDiv.classList.remove('translate-x-full');
+            }, 100);
+
+            setTimeout(() => {
+                messageDiv.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房屋类型管理 - 管理后台</title>
+    <!-- DNS预解析和预连接优化 -->
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
+    <!-- 关键CSS资源优化加载 -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+
+    <style>
+        /* 页面初始化 - 防止样式闪烁 */
+        /* 移除页面初始隐藏，提升加载速度 */
+
+        /* 加载动画 */
+        .dashboard-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #4b6cb7 0%, #182848 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .dashboard-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-loader-text {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 侧边栏渐变背景 */
+        .bg-sidebar {
+            background: linear-gradient(180deg, #4b6cb7 0%, #182848 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans flex h-screen">
+    <!-- 仪表盘加载动画 -->
+    <div class="dashboard-loader" id="dashboardLoader">
+        <div class="dashboard-spinner"></div>
+        <div class="dashboard-loader-text">房屋类型管理加载中...</div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <aside class="bg-sidebar text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out">
+        <div class="flex items-center justify-center space-x-2">
+            <i class="fas fa-home text-white text-2xl"></i>
+            <span class="text-2xl font-extrabold">管理后台</span>
+        </div>
+        <nav>
+            <a href="/admin/dashboard" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-home fa-fw mr-3"></i>控制台
+            </a>
+            <a href="/admin/properties" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-building fa-fw mr-3"></i>房源管理
+            </a>
+            <a href="/admin/appointments" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-calendar-check fa-fw mr-3"></i>预约管理
+                <span id="appointmentBadge" class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full hidden">0</span>
+            </a>
+            <a href="/admin/customer_favorites" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-heart fa-fw mr-3"></i>客户收藏
+            </a>
+            <a href="/admin/locations" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-map-marker-alt fa-fw mr-3"></i>位置管理
+            </a>
+            <a href="/admin/property_types" class="block py-2.5 px-4 rounded transition duration-200 bg-blue-700 hover:bg-blue-800">
+                <i class="fas fa-home fa-fw mr-3"></i>房屋类型
+            </a>
+            <a href="/admin/profile" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-user fa-fw mr-3"></i>个人资料
+            </a>
+            <a href="#" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-chart-line fa-fw mr-3"></i>统计分析
+            </a>
+            <a href="#" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-cog fa-fw mr-3"></i>系统设置
+            </a>
+        </nav>
+    </aside>
+
+    <!-- 主要内容区域 -->
+    <div class="flex flex-col flex-1 overflow-hidden">
+        <!-- 顶部导航栏 -->
+        <header class="flex justify-between items-center py-4 px-6 bg-white border-b-4 border-indigo-600 shadow">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-800">房屋类型管理</h1>
+                <p class="text-gray-600">管理房屋类型信息</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-600">{{ user.display_name or user.email }}</span>
+                <a href="/admin/logout" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-6">
+                <div class="container mx-auto px-6 py-8">
+                    <!-- 操作栏 -->
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center space-x-4">
+                            <h2 class="text-2xl font-bold text-gray-900">房屋类型列表</h2>
+                            <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-2.5 py-0.5 rounded" id="typeCount">
+                                加载中...
+                            </span>
+                        </div>
+                        <button onclick="showAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+                            <i class="fas fa-plus mr-2"></i>添加类型
+                        </button>
+                    </div>
+
+                    <!-- 筛选栏 -->
+                    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">状态筛选</label>
+                                <select id="statusFilter" onchange="filterTypes()" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="">全部状态</option>
+                                    <option value="true">启用</option>
+                                    <option value="false">禁用</option>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">搜索</label>
+                                <input type="text" id="searchInput" placeholder="搜索类型名称或描述..." 
+                                       onkeyup="filterTypes()" 
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 房屋类型列表 -->
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型信息</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">排序</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="typeTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- 动态加载内容 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 添加/编辑房屋类型模态框 -->
+    <div id="typeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900" id="modalTitle">添加房屋类型</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="typeForm">
+                    <input type="hidden" id="typeId" name="id">
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">类型名称 *</label>
+                        <input type="text" id="typeName" name="name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               placeholder="如：整套公寓">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">类型描述</label>
+                        <textarea id="typeDescription" name="description" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                  placeholder="描述这种房屋类型的特点..."></textarea>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">排序顺序</label>
+                        <input type="number" id="typeSortOrder" name="sort_order" min="0" value="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <p class="text-xs text-gray-500 mt-1">数字越小排序越靠前</p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="typeIsActive" name="is_active" checked
+                                   class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            <span class="ml-2 text-sm text-gray-700">启用此类型</span>
+                        </label>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeModal()" 
+                                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-200">
+                            取消
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-200">
+                            <i class="fas fa-save mr-1"></i>保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let propertyTypes = [];
+        let filteredTypes = [];
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPropertyTypes();
+        });
+
+        // 加载房屋类型列表
+        async function loadPropertyTypes() {
+            try {
+                const response = await fetch('/api/property_types?active_only=false');
+                const data = await response.json();
+                
+                if (data.success) {
+                    propertyTypes = data.data;
+                    filteredTypes = [...propertyTypes];
+                    renderTypes();
+                    updateTypeCount();
+                } else {
+                    showMessage('加载房屋类型列表失败: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('加载房屋类型列表失败:', error);
+                showMessage('加载房屋类型列表失败', 'error');
+            }
+        }
+
+        // 渲染房屋类型列表
+        function renderTypes() {
+            const tbody = document.getElementById('typeTableBody');
+            
+            if (filteredTypes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>暂无房屋类型数据</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredTypes.map(type => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${type.name}</div>
+                            <div class="text-sm text-gray-500">${type.description || '无描述'}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            type.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }">
+                            ${type.is_active ? '✅ 启用' : '❌ 禁用'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${type.sort_order}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${new Date(type.created_at).toLocaleDateString('zh-CN')}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="editType(${type.id})" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button onclick="toggleTypeStatus(${type.id}, ${!type.is_active})" 
+                                class="text-${type.is_active ? 'red' : 'green'}-600 hover:text-${type.is_active ? 'red' : 'green'}-900 mr-3">
+                            <i class="fas fa-${type.is_active ? 'ban' : 'check'}"></i> ${type.is_active ? '禁用' : '启用'}
+                        </button>
+                        <button onclick="deleteType(${type.id})" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 更新类型计数
+        function updateTypeCount() {
+            const activeCount = filteredTypes.filter(type => type.is_active).length;
+            const totalCount = filteredTypes.length;
+            document.getElementById('typeCount').textContent = `${activeCount}/${totalCount} 个类型`;
+        }
+
+        // 筛选房屋类型
+        function filterTypes() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredTypes = propertyTypes.filter(type => {
+                const matchStatus = !statusFilter || type.is_active.toString() === statusFilter;
+                const matchSearch = !searchInput || 
+                    type.name.toLowerCase().includes(searchInput) ||
+                    (type.description && type.description.toLowerCase().includes(searchInput));
+
+                return matchStatus && matchSearch;
+            });
+
+            renderTypes();
+            updateTypeCount();
+        }
+
+        // 显示添加模态框
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '添加房屋类型';
+            document.getElementById('typeForm').reset();
+            document.getElementById('typeId').value = '';
+            document.getElementById('typeIsActive').checked = true;
+            document.getElementById('typeModal').classList.remove('hidden');
+        }
+
+        // 编辑房屋类型
+        function editType(id) {
+            const type = propertyTypes.find(t => t.id === id);
+            if (!type) return;
+
+            document.getElementById('modalTitle').textContent = '编辑房屋类型';
+            document.getElementById('typeId').value = type.id;
+            document.getElementById('typeName').value = type.name;
+            document.getElementById('typeDescription').value = type.description || '';
+            document.getElementById('typeSortOrder').value = type.sort_order;
+            document.getElementById('typeIsActive').checked = type.is_active;
+            document.getElementById('typeModal').classList.remove('hidden');
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('typeModal').classList.add('hidden');
+        }
+
+        // 表单提交
+        document.getElementById('typeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const typeData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                sort_order: parseInt(formData.get('sort_order')) || 0,
+                is_active: formData.get('is_active') === 'on'
+            };
+
+            const typeId = formData.get('id');
+            const isEdit = typeId && typeId !== '';
+
+            try {
+                const url = isEdit ? `/admin/property_types/${typeId}` : '/admin/property_types';
+                const method = isEdit ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(typeData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(isEdit ? '房屋类型更新成功' : '房屋类型添加成功', 'success');
+                    closeModal();
+                    loadPropertyTypes();
+                } else {
+                    showMessage(result.message || '操作失败', 'error');
+                }
+            } catch (error) {
+                console.error('操作失败:', error);
+                showMessage('操作失败', 'error');
+            }
+        });
+
+        // 切换类型状态
+        async function toggleTypeStatus(id, newStatus) {
+            try {
+                const response = await fetch(`/admin/property_types/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ is_active: newStatus })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(`房屋类型${newStatus ? '启用' : '禁用'}成功`, 'success');
+                    loadPropertyTypes();
+                } else {
+                    showMessage(result.message || '操作失败', 'error');
+                }
+            } catch (error) {
+                console.error('操作失败:', error);
+                showMessage('操作失败', 'error');
+            }
+        }
+
+        // 删除房屋类型
+        async function deleteType(id) {
+            if (!confirm('确定要删除这个房屋类型吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/property_types/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('房屋类型删除成功', 'success');
+                    loadPropertyTypes();
+                } else {
+                    showMessage(result.message || '删除失败', 'error');
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+                showMessage('删除失败', 'error');
+            }
+        }
+
+        // 显示消息
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-md text-white ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+            messageDiv.textContent = message;
+
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                document.body.removeChild(messageDiv);
+            }, 3000);
+        }
+
+        // 用户菜单控制
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // 更新预约数量徽章
+        function updateAppointmentBadge(count) {
+            const badge = document.getElementById('appointmentBadge');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // 获取预约数量
+        async function loadAppointmentCount() {
+            try {
+                const response = await fetch('/api/appointments?status=pending');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        updateAppointmentBadge(data.data.length);
+                    }
+                }
+            } catch (error) {
+                console.error('获取预约数量失败:', error);
+            }
+        }
+
+        // 页面加载完成后隐藏加载动画并加载预约数量
+        // 页面加载完成后立即隐藏加载动画并加载预约数量
+        window.addEventListener('DOMContentLoaded', function() {
+            // 立即隐藏加载动画，提升用户体验
+            document.getElementById('dashboardLoader').style.display = 'none';
+            loadAppointmentCount(); // 加载预约数量
+        });
+    </script>
+</body>
+</html>

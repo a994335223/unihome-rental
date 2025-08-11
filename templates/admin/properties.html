@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房源管理 - 管理后台</title>
+    <!-- DNS预解析和预连接优化 -->
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
+    <!-- 关键CSS资源优化加载 -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+
+    <style>
+        /* 页面初始化 - 防止样式闪烁 */
+        /* 移除页面初始隐藏，提升加载速度 */
+
+        /* 加载动画 */
+        .dashboard-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #4b6cb7 0%, #182848 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .dashboard-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-loader-text {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 侧边栏渐变背景 */
+        .bg-sidebar {
+            background: linear-gradient(180deg, #4b6cb7 0%, #182848 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans flex h-screen">
+    <!-- 仪表盘加载动画 -->
+    <div class="dashboard-loader" id="dashboardLoader">
+        <div class="dashboard-spinner"></div>
+        <div class="dashboard-loader-text">房源管理加载中...</div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <aside class="bg-sidebar text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out">
+        <div class="flex items-center justify-center space-x-2">
+            <i class="fas fa-home text-white text-2xl"></i>
+            <span class="text-2xl font-extrabold">管理后台</span>
+        </div>
+        <nav>
+            <a href="/admin/dashboard" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-home fa-fw mr-3"></i>控制台
+            </a>
+            <a href="/admin/properties" class="block py-2.5 px-4 rounded transition duration-200 bg-blue-700 hover:bg-blue-800">
+                <i class="fas fa-building fa-fw mr-3"></i>房源管理
+            </a>
+            <a href="/admin/appointments" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-calendar-check fa-fw mr-3"></i>预约管理
+                <span id="appointmentBadge" class="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full hidden">0</span>
+            </a>
+            <a href="/admin/customer_favorites" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-heart fa-fw mr-3"></i>客户收藏
+            </a>
+            <a href="/admin/locations" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-map-marker-alt fa-fw mr-3"></i>位置管理
+            </a>
+            <a href="/admin/property_types" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-home fa-fw mr-3"></i>房屋类型
+            </a>
+            <a href="/admin/profile" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-user fa-fw mr-3"></i>个人资料
+            </a>
+            <a href="#" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-chart-line fa-fw mr-3"></i>统计分析
+            </a>
+            <a href="#" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-blue-800">
+                <i class="fas fa-cog fa-fw mr-3"></i>系统设置
+            </a>
+            </nav>
+        </aside>
+
+        <!-- 主要内容区域 -->
+        <div class="flex flex-col flex-1 overflow-hidden">
+            <!-- 顶部导航栏 -->
+            <header class="flex justify-between items-center py-4 px-6 bg-white border-b-4 border-indigo-600 shadow">
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-800">房源管理</h1>
+                    <p class="text-gray-600">管理和维护房源信息</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">{{ user.display_name or user.email }}</span>
+                    <a href="/admin/logout" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-sign-out-alt"></i> 退出
+                    </a>
+                </div>
+            </header>
+
+            <!-- 主内容区 -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-6">
+                <div class="container mx-auto px-6 py-8">
+                    <!-- 操作栏 -->
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center space-x-4">
+                            <a href="/admin/property/add" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+                                <i class="fas fa-plus mr-2"></i>添加房源
+                            </a>
+                            <div class="relative">
+                                <select id="statusFilter" class="appearance-none bg-white border border-gray-300 rounded py-2 px-4 pr-8 leading-tight focus:outline-none focus:border-indigo-500">
+                                    <option value="">全部状态</option>
+                                    <option value="active">已上架</option>
+                                    <option value="pending">待审核</option>
+                                    <option value="inactive">已下架</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="text" id="searchInput" placeholder="搜索房源..." class="border-2 border-gray-300 bg-white h-10 px-5 pr-10 rounded-lg text-sm focus:outline-none focus:border-indigo-500">
+                            <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded ml-2">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 房源统计 -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white rounded-lg shadow p-4">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-blue-500 bg-opacity-75 text-white mr-4">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">总房源</p>
+                                    <p class="text-xl font-bold">{{ properties|length }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-4">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-500 bg-opacity-75 text-white mr-4">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">已上架</p>
+                                    <p class="text-xl font-bold">{{ properties|selectattr('status', 'equalto', 'active')|list|length }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-4">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-yellow-500 bg-opacity-75 text-white mr-4">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">待审核</p>
+                                    <p class="text-xl font-bold">{{ properties|selectattr('status', 'equalto', 'pending')|list|length }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-4">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-red-500 bg-opacity-75 text-white mr-4">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">已下架</p>
+                                    <p class="text-xl font-bold">{{ properties|selectattr('status', 'equalto', 'inactive')|list|length }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 房源列表 -->
+                    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-gray-800 text-white">
+                                    <tr>
+                                        <th class="py-3 px-4 text-left">ID</th>
+                                        <th class="py-3 px-4 text-left">房源名称</th>
+                                        <th class="py-3 px-4 text-left">地区</th>
+                                        <th class="py-3 px-4 text-left">价格</th>
+                                        <th class="py-3 px-4 text-left">房型</th>
+                                        <th class="py-3 px-4 text-left">面积</th>
+                                        <th class="py-3 px-4 text-left">创建时间</th>
+                                        <th class="py-3 px-4 text-left">状态</th>
+                                        <th class="py-3 px-4 text-left">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-gray-700" id="propertiesTableBody">
+                                    {% for property in properties %}
+                                    <tr class="border-b hover:bg-gray-50" data-status="{{ property.status }}">
+                                        <td class="py-3 px-4">#{{ property.id }}</td>
+                                        <td class="py-3 px-4">
+                                            <div class="font-medium">{{ property.name or '未命名' }}</div>
+                                            <div class="text-sm text-gray-500">{{ property.description[:50] }}...</div>
+                                        </td>
+                                        <td class="py-3 px-4">{{ property.location or '-' }}</td>
+                                        <td class="py-3 px-4">
+                                            <span class="font-bold">{{ property.currency or '$' }}{{ property.price or '0' }}</span>
+                                            <span class="text-sm text-gray-500">/月</span>
+                                        </td>
+                                        <td class="py-3 px-4">{{ property.property_type or '-' }}</td>
+                                        <td class="py-3 px-4">{{ property.area or '-' }}m²</td>
+                                        <td class="py-3 px-4">{{ property.created_at.strftime('%Y-%m-%d') if property.created_at else '-' }}</td>
+                                        <td class="py-3 px-4">
+                                            {% if property.status == 'active' %}
+                                                <span class="bg-green-200 text-green-700 py-1 px-3 rounded-full text-xs">已上架</span>
+                                            {% elif property.status == 'pending' %}
+                                                <span class="bg-yellow-200 text-yellow-700 py-1 px-3 rounded-full text-xs">待审核</span>
+                                            {% elif property.status == 'inactive' %}
+                                                <span class="bg-red-200 text-red-700 py-1 px-3 rounded-full text-xs">已下架</span>
+                                            {% else %}
+                                                <span class="bg-gray-200 text-gray-700 py-1 px-3 rounded-full text-xs">{{ property.status or '未知' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <div class="flex space-x-1">
+                                                <a href="/admin/property/edit/{{ property.id }}" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-sm" title="编辑">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="/property/{{ property.id }}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white py-1 px-2 rounded text-sm" title="查看">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <button onclick="toggleStatus({{ property.id }})" class="bg-orange-500 hover:bg-orange-600 text-white py-1 px-2 rounded text-sm" title="切换状态">
+                                                    <i class="fas fa-toggle-on"></i>
+                                                </button>
+                                                <button onclick="deleteProperty({{ property.id }})" class="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-sm" title="删除">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="9" class="py-8 px-4 text-center text-gray-500">
+                                            <i class="fas fa-home text-4xl mb-4 text-gray-300"></i>
+                                            <p>暂无房源数据</p>
+                                            <a href="/admin/property/add" class="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded">
+                                                <i class="fas fa-plus mr-1"></i>添加第一个房源
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // 状态切换功能
+        async function toggleStatus(propertyId) {
+            if (!confirm('确定要切换房源状态吗？')) return;
+            
+            try {
+                const response = await fetch(`/admin/property/toggle_status/${propertyId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('状态切换失败，请重试');
+                }
+            } catch (error) {
+                console.error('状态切换失败:', error);
+                alert('状态切换失败，请重试');
+            }
+        }
+
+        // 删除房源功能
+        async function deleteProperty(propertyId) {
+            if (!confirm('确定要删除这个房源吗？此操作不可恢复！')) return;
+            
+            try {
+                const response = await fetch(`/admin/property/delete/${propertyId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('房源删除成功！');
+                        location.reload();
+                    } else {
+                        alert('删除失败：' + (result.message || '未知错误'));
+                    }
+                } else {
+                    alert('删除失败，请重试');
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+                alert('删除失败，请重试');
+            }
+        }
+
+        // 搜索和筛选功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const tableBody = document.getElementById('propertiesTableBody');
+            const rows = Array.from(tableBody.querySelectorAll('tr[data-status]'));
+
+            function filterTable() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const statusFilter = document.getElementById('statusFilter').value;
+
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    const status = row.getAttribute('data-status');
+                    
+                    const matchesSearch = text.includes(searchTerm);
+                    const matchesStatus = !statusFilter || status === statusFilter;
+                    
+                    row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+                });
+            }
+
+            searchInput.addEventListener('input', filterTable);
+            statusFilter.addEventListener('change', filterTable);
+        });
+
+        // 更新预约数量徽章
+        function updateAppointmentBadge(count) {
+            const badge = document.getElementById('appointmentBadge');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // 获取预约数量
+        async function loadAppointmentCount() {
+            try {
+                const response = await fetch('/api/appointments?status=pending');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        updateAppointmentBadge(data.data.length);
+                    }
+                }
+            } catch (error) {
+                console.error('获取预约数量失败:', error);
+            }
+        }
+
+        // 页面加载完成后隐藏加载动画并加载预约数量
+        // 页面加载完成后立即隐藏加载动画并加载预约数量
+        window.addEventListener('DOMContentLoaded', function() {
+            // 立即隐藏加载动画，提升用户体验
+            document.getElementById('dashboardLoader').style.display = 'none';
+            loadAppointmentCount(); // 加载预约数量
+        });
+    </script>
+</body>
+</html>

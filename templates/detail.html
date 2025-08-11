@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ property.name }} - 房源详情</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-home text-white"></i>
+                        </div>
+                        <span class="text-xl font-bold text-gray-900">租房平台</span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-indigo-600">首页</a>
+                    <a href="/search" class="text-gray-600 hover:text-indigo-600">搜索房源</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 返回按钮 -->
+        <div class="mb-6">
+            <a href="/" class="inline-flex items-center text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i>
+                返回房源列表
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左侧：房源详情 -->
+            <div class="lg:col-span-2">
+                <!-- 房源图片 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                    {% if property.images %}
+                        <img src="{{ property.images[0].path }}" alt="{{ property.name }}" class="w-full h-64 object-cover">
+                    {% else %}
+                        <div class="w-full h-64 bg-gray-200 flex items-center justify-center">
+                            <i class="fas fa-home text-gray-400 text-4xl"></i>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 房源基本信息 -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ property.name }}</h1>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-indigo-600">{{ property.currency }}{{ property.price }}</div>
+                            <div class="text-sm text-gray-500">每月租金</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gray-900">{{ property.bedrooms or '-' }}</div>
+                            <div class="text-sm text-gray-500">卧室</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gray-900">{{ property.bathrooms or '-' }}</div>
+                            <div class="text-sm text-gray-500">浴室</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gray-900">{{ property.area or '-' }}m²</div>
+                            <div class="text-sm text-gray-500">面积</div>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">房源描述</h3>
+                        <p class="text-gray-600 leading-relaxed">{{ property.description }}</p>
+                    </div>
+                </div>
+
+                <!-- 房源详细信息 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">详细信息</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-sm text-gray-500">地址：</span>
+                            <span class="text-gray-900">{{ property.address or '暂无' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-gray-500">房型：</span>
+                            <span class="text-gray-900">{{ property.property_type or '暂无' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-gray-500">国家：</span>
+                            <span class="text-gray-900">{{ property.country or '暂无' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-gray-500">押金：</span>
+                            <span class="text-gray-900">{{ property.currency }}{{ property.deposit or '面议' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：联系信息 -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6 sticky top-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">联系房东</h3>
+
+                    <!-- 房东信息 -->
+                    <div class="flex items-center mb-6 p-4 bg-gray-50 rounded-lg">
+                        <div class="h-12 w-12 rounded-full bg-indigo-600 flex items-center justify-center mr-4">
+                            {% if property.owner.avatar %}
+                                <img src="{{ property.owner.avatar }}" alt="房东头像" class="h-12 w-12 rounded-full object-cover">
+                            {% else %}
+                                <i class="fas fa-user text-white"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-900">{{ property.owner.display_name or property.owner.username }}</h4>
+                            <p class="text-sm text-gray-600">房东</p>
+                        </div>
+                    </div>
+
+                    <!-- 联系方式 -->
+                    <div class="space-y-3">
+                        {% if property.owner.phone %}
+                        <a href="tel:{{ property.owner.phone }}" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-phone mr-2"></i>
+                            {{ property.owner.phone }}
+                        </a>
+                        {% endif %}
+
+                        {% if property.owner.wechat %}
+                        <button onclick="showWechatInfo('{{ property.owner.wechat }}')" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200">
+                            <i class="fab fa-weixin mr-2"></i>
+                            微信联系
+                        </button>
+                        {% endif %}
+
+                        <a href="mailto:{{ property.owner.email }}" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-envelope mr-2"></i>
+                            发送邮件
+                        </a>
+
+                        {% if not property.owner.phone and not property.owner.wechat %}
+                        <div class="text-center text-gray-500 text-sm py-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            房东暂未设置联系方式，请通过邮件联系
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t">
+                        <h4 class="font-medium text-gray-900 mb-2">房源编号</h4>
+                        <p class="text-gray-600">#{{ property.id }}</p>
+
+                        <h4 class="font-medium text-gray-900 mb-2 mt-4">发布时间</h4>
+                        <p class="text-gray-600">{{ property.created_at.strftime('%Y年%m月%d日') if property.created_at else '未知' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 相似房源 -->
+        {% if similar_properties %}
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">相似房源推荐</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% for similar in similar_properties %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-200">
+                    {% if similar.images %}
+                        <img src="{{ similar.images[0].path }}" alt="{{ similar.name }}" class="w-full h-48 object-cover">
+                    {% else %}
+                        <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                            <i class="fas fa-home text-gray-400 text-2xl"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-900 mb-2">{{ similar.name }}</h3>
+                        <p class="text-gray-600 text-sm mb-3">{{ similar.description[:100] }}...</p>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold text-indigo-600">{{ similar.currency }}{{ similar.price }}/月</span>
+                            <a href="/property/{{ similar.id }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
+                                查看详情 <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center">
+                <p>&copy; 2025 租房管理平台. 保留所有权利。</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 微信信息弹窗 -->
+    <div id="wechatModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <div class="text-center">
+                <div class="mb-4">
+                    <i class="fab fa-weixin text-green-500 text-4xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">微信号</h3>
+                <p id="wechatId" class="text-xl font-mono text-gray-800 bg-gray-100 px-4 py-2 rounded mb-4"></p>
+                <p class="text-sm text-gray-600 mb-4">请复制微信号添加好友</p>
+                <div class="flex space-x-3">
+                    <button onclick="copyWechat()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded transition duration-200">
+                        <i class="fas fa-copy mr-1"></i>复制
+                    </button>
+                    <button onclick="closeWechatModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded transition duration-200">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showWechatInfo(wechatId) {
+            document.getElementById('wechatId').textContent = wechatId;
+            document.getElementById('wechatModal').classList.remove('hidden');
+        }
+
+        function closeWechatModal() {
+            document.getElementById('wechatModal').classList.add('hidden');
+        }
+
+        function copyWechat() {
+            const wechatId = document.getElementById('wechatId').textContent;
+            navigator.clipboard.writeText(wechatId).then(function() {
+                alert('微信号已复制到剪贴板');
+                closeWechatModal();
+            }).catch(function() {
+                // 备用复制方法
+                const textArea = document.createElement('textarea');
+                textArea.value = wechatId;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('微信号已复制到剪贴板');
+                closeWechatModal();
+            });
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('wechatModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeWechatModal();
+            }
+        });
+    </script>
+</body>
+</html>

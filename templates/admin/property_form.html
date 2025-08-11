@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - {{ '编辑' if property else '添加' }}房源</title>
+
+    <!-- DNS预解析和预连接优化 -->
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
+    <!-- 关键CSS资源优化加载 -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"></noscript>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* 页面初始化 - 防止样式闪烁 */
+        body {
+            visibility: hidden;
+        }
+
+        /* 加载动画 */
+        .form-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .form-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .form-loader-text {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 页面显示动画 */
+        .form-loaded {
+            visibility: visible !important;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .form-loader.hide {
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 自定义样式 */
+        .form-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .input-focus:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .section-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 表单加载动画 -->
+    <div class="form-loader" id="formLoader">
+        <div class="form-spinner"></div>
+        <div class="form-loader-text">{{ '编辑' if property else '添加' }}房源表单加载中...</div>
+    </div>
+    <!-- 主容器 -->
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- 页面标题 -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full mb-4">
+                <i class="fas fa-{{ 'edit' if property else 'plus' }} text-white text-2xl"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">{{ '编辑' if property else '添加' }}房源信息</h1>
+            <p class="text-gray-600">{{ '修改房源详细信息' if property else '填写完整的房源信息以发布到平台' }}</p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-8">
+            <!-- 基本信息卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-info-circle text-blue-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">基本信息</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="col-span-full">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-home mr-2 text-gray-400"></i>房源名称 *
+                        </label>
+                        <input type="text" name="name" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="例如：现代学生公寓"
+                               value="{{ property.name if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-map-marker-alt mr-2 text-gray-400"></i>所在地区 *
+                        </label>
+                        <input type="text" name="location" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="例如：多伦多"
+                               value="{{ property.location if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-globe mr-2 text-gray-400"></i>国家 *
+                        </label>
+                        <input type="text" name="country" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="例如：Canada"
+                               value="{{ property.country if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-map mr-2 text-gray-400"></i>详细地址
+                        </label>
+                        <input type="text" name="address"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="例如：123 Main Street"
+                               value="{{ property.address if property else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 价格信息卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-dollar-sign text-green-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">价格信息</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tag mr-2 text-gray-400"></i>租金价格 *
+                        </label>
+                        <input type="number" step="0.01" name="price" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="750"
+                               value="{{ property.price if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-coins mr-2 text-gray-400"></i>币种
+                        </label>
+                        <select name="currency" class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200">
+                            <option value="$" {{ 'selected' if property and property.currency == '$' else '' }}>加元 ($)</option>
+                            <option value="¥" {{ 'selected' if property and property.currency == '¥' else '' }}>人民币 (¥)</option>
+                            <option value="USD" {{ 'selected' if property and property.currency == 'USD' else '' }}>美元 (USD)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-shield-alt mr-2 text-gray-400"></i>押金
+                        </label>
+                        <input type="number" step="0.01" name="deposit"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="750"
+                               value="{{ property.deposit if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-bolt mr-2 text-gray-400"></i>水电费
+                        </label>
+                        <select name="utility" class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200">
+                            <option value="包含" {{ 'selected' if property and property.utility == '包含' else '' }}>包含</option>
+                            <option value="不包含" {{ 'selected' if property and property.utility == '不包含' else '' }}>不包含</option>
+                            <option value="部分包含" {{ 'selected' if property and property.utility == '部分包含' else '' }}>部分包含</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 房屋详情卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-bed text-purple-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">房屋详情</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-bed mr-2 text-gray-400"></i>卧室数量
+                        </label>
+                        <input type="number" name="bedrooms" min="0"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="2"
+                               value="{{ property.bedrooms if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-bath mr-2 text-gray-400"></i>卫生间数量
+                        </label>
+                        <input type="number" name="bathrooms" min="0"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="1"
+                               value="{{ property.bathrooms if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-ruler-combined mr-2 text-gray-400"></i>面积 (m²)
+                        </label>
+                        <input type="number" step="0.1" name="area" min="0"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                               placeholder="60"
+                               value="{{ property.area if property else '' }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-home mr-2 text-gray-400"></i>房源类型
+                        </label>
+                        <select name="property_type" class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200">
+                            <option value="">请选择类型</option>
+                            <option value="整套公寓" {{ 'selected' if property and property.property_type == '整套公寓' else '' }}>整套公寓</option>
+                            <option value="单间" {{ 'selected' if property and property.property_type == '单间' else '' }}>单间</option>
+                            <option value="合租房间" {{ 'selected' if property and property.property_type == '合租房间' else '' }}>合租房间</option>
+                            <option value="学生宿舍" {{ 'selected' if property and property.property_type == '学生宿舍' else '' }}>学生宿舍</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-calendar-alt mr-2 text-gray-400"></i>最短租期
+                        </label>
+                        <select name="min_term" class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200">
+                            <option value="">请选择租期</option>
+                            <option value="1个月" {{ 'selected' if property and property.min_term == '1个月' else '' }}>1个月</option>
+                            <option value="3个月" {{ 'selected' if property and property.min_term == '3个月' else '' }}>3个月</option>
+                            <option value="4个月" {{ 'selected' if property and property.min_term == '4个月' else '' }}>4个月</option>
+                            <option value="6个月" {{ 'selected' if property and property.min_term == '6个月' else '' }}>6个月</option>
+                            <option value="12个月" {{ 'selected' if property and property.min_term == '12个月' else '' }}>12个月</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-toggle-on mr-2 text-gray-400"></i>发布状态
+                        </label>
+                        <select name="status" class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200">
+                            <option value="active" {{ 'selected' if property and property.status == 'active' else '' }}>已发布</option>
+                            <option value="pending" {{ 'selected' if property and property.status == 'pending' else '' }}>待审核</option>
+                            <option value="inactive" {{ 'selected' if property and property.status == 'inactive' else '' }}>已下架</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 房源描述卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-file-alt text-yellow-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">房源描述</h2>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-align-left mr-2 text-gray-400"></i>详细描述
+                    </label>
+                    <textarea name="description" rows="6"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200 resize-none"
+                              placeholder="请详细描述房源的特点、周边环境、交通便利性等信息...">{{ property.description if property else '' }}</textarea>
+                </div>
+            </div>
+            <!-- 媒体文件卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-images text-indigo-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">媒体文件</h2>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 图片上传 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-camera mr-2 text-gray-400"></i>房源图片
+                        </label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors duration-200" id="imageDropZone">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <input type="file" name="images" multiple accept="image/*"
+                                   class="hidden" id="imageUpload">
+                            <label for="imageUpload" class="cursor-pointer">
+                                <span class="text-indigo-600 font-medium">点击上传图片</span>
+                                <span class="text-gray-500"> 或拖拽文件到此处</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-2">支持 PNG, JPG, JPEG, GIF 格式，最大 10MB</p>
+                        </div>
+                        <!-- 图片预览区域 -->
+                        <div id="imagePreview" class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4 hidden"></div>
+                    </div>
+
+                    <!-- 视频上传 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-video mr-2 text-gray-400"></i>房源视频
+                        </label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors duration-200" id="videoDropZone">
+                            <i class="fas fa-film text-4xl text-gray-400 mb-4"></i>
+                            <input type="file" name="videos" multiple accept="video/*"
+                                   class="hidden" id="videoUpload">
+                            <label for="videoUpload" class="cursor-pointer">
+                                <span class="text-indigo-600 font-medium">点击上传视频</span>
+                                <span class="text-gray-500"> 或拖拽文件到此处</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-2">支持 MP4, WEBM 格式，最大 50MB</p>
+                        </div>
+                        <!-- 视频预览区域 -->
+                        <div id="videoPreview" class="mt-4 space-y-4 hidden"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设施和服务卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-concierge-bell text-green-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">设施和服务</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- 基础设施 -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">基础设施</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="wifi" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-wifi text-indigo-600"></i>
+                            <span class="text-gray-700">免费WiFi</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="tv" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-tv text-indigo-600"></i>
+                            <span class="text-gray-700">电视</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="parking" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-parking text-indigo-600"></i>
+                            <span class="text-gray-700">停车位</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="air_conditioning" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-snowflake text-indigo-600"></i>
+                            <span class="text-gray-700">空调</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="heating" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-fire text-indigo-600"></i>
+                            <span class="text-gray-700">暖气</span>
+                        </label>
+                    </div>
+
+                    <!-- 厨房设施 -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">厨房设施</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="kitchen" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-utensils text-indigo-600"></i>
+                            <span class="text-gray-700">厨房</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="refrigerator" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-cube text-indigo-600"></i>
+                            <span class="text-gray-700">冰箱</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="microwave" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-microchip text-indigo-600"></i>
+                            <span class="text-gray-700">微波炉</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="washing_machine" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-tshirt text-indigo-600"></i>
+                            <span class="text-gray-700">洗衣机</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="dishwasher" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-sink text-indigo-600"></i>
+                            <span class="text-gray-700">洗碗机</span>
+                        </label>
+                    </div>
+
+                    <!-- 其他服务 -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">其他服务</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="gym" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-dumbbell text-indigo-600"></i>
+                            <span class="text-gray-700">健身房</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="pool" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-swimming-pool text-indigo-600"></i>
+                            <span class="text-gray-700">游泳池</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="elevator" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-elevator text-indigo-600"></i>
+                            <span class="text-gray-700">电梯</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="security" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-shield-alt text-indigo-600"></i>
+                            <span class="text-gray-700">24小时安保</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="facilities" value="pets_allowed" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <i class="fas fa-paw text-indigo-600"></i>
+                            <span class="text-gray-700">允许宠物</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 自定义设施输入 -->
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-plus mr-2 text-gray-400"></i>其他设施（可选）
+                    </label>
+                    <input type="text" name="custom_facilities"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                           placeholder="请输入其他设施，用逗号分隔，如：阳台,花园,书房">
+                </div>
+            </div>
+
+            <!-- 交通信息卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-bus text-blue-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">交通信息</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">公共交通</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="traffic" value="bus" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <i class="fas fa-bus text-blue-600"></i>
+                            <span class="text-gray-700">附近公交站</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="traffic" value="subway" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <i class="fas fa-subway text-blue-600"></i>
+                            <span class="text-gray-700">地铁站</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="traffic" value="taxi" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <i class="fas fa-taxi text-blue-600"></i>
+                            <span class="text-gray-700">出租车站</span>
+                        </label>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">其他交通</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="traffic" value="bike" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <i class="fas fa-bicycle text-blue-600"></i>
+                            <span class="text-gray-700">共享单车</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="traffic" value="airport" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <i class="fas fa-plane text-blue-600"></i>
+                            <span class="text-gray-700">机场巴士</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 自定义交通信息 -->
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-plus mr-2 text-gray-400"></i>其他交通信息（可选）
+                    </label>
+                    <input type="text" name="custom_traffic"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                           placeholder="请输入其他交通信息，用逗号分隔，如：高速公路入口,火车站">
+                </div>
+            </div>
+
+            <!-- 周边环境卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-map-marker-alt text-green-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">周边环境</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">购物餐饮</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="supermarket" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-shopping-basket text-green-600"></i>
+                            <span class="text-gray-700">附近超市</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="mall" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-shopping-bag text-green-600"></i>
+                            <span class="text-gray-700">购物中心</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="restaurant" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-utensils text-green-600"></i>
+                            <span class="text-gray-700">餐厅</span>
+                        </label>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">教育医疗</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="school" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-school text-green-600"></i>
+                            <span class="text-gray-700">学校</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="hospital" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-hospital text-green-600"></i>
+                            <span class="text-gray-700">医院</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="library" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-book text-green-600"></i>
+                            <span class="text-gray-700">图书馆</span>
+                        </label>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">休闲娱乐</h3>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="park" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-tree text-green-600"></i>
+                            <span class="text-gray-700">公园</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="gym" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-dumbbell text-green-600"></i>
+                            <span class="text-gray-700">健身房</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="surroundings" value="cinema" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                            <i class="fas fa-film text-green-600"></i>
+                            <span class="text-gray-700">电影院</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 自定义周边环境 -->
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-plus mr-2 text-gray-400"></i>其他周边环境（可选）
+                    </label>
+                    <input type="text" name="custom_surroundings"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                           placeholder="请输入其他周边环境，用逗号分隔，如：银行,邮局,咖啡厅">
+                </div>
+            </div>
+
+            <!-- 视频链接卡片 -->
+            <div class="section-card p-6">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-video text-purple-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900">视频展示</h2>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-link mr-2 text-gray-400"></i>视频链接（可选）
+                    </label>
+                    <input type="url" name="video"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition-all duration-200"
+                           placeholder="请输入视频链接，支持YouTube、B站、腾讯视频等，如：https://www.youtube.com/watch?v=...">
+                    <p class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        支持YouTube、B站、腾讯视频链接，或直接的MP4视频文件链接
+                    </p>
+                </div>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-between items-center pt-6">
+                <a href="/admin/dashboard"
+                   class="w-full sm:w-auto px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-all duration-200 text-center">
+                    <i class="fas fa-arrow-left mr-2"></i>返回仪表盘
+                </a>
+
+                <button type="submit"
+                        class="w-full sm:w-auto px-8 py-3 btn-primary text-white font-medium rounded-lg text-center">
+                    <i class="fas fa-{{ 'save' if property else 'plus' }} mr-2"></i>
+                    {{ '更新房源' if property else '添加房源' }}
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        // CSS加载检测和页面显示控制
+        function checkFormCSSLoaded() {
+            return new Promise((resolve) => {
+                const testElement = document.createElement('div');
+                testElement.className = 'flex justify-center items-center bg-white';
+                testElement.style.position = 'absolute';
+                testElement.style.visibility = 'hidden';
+                document.body.appendChild(testElement);
+
+                const styles = window.getComputedStyle(testElement);
+                const isLoaded = styles.display === 'flex' &&
+                                styles.justifyContent === 'center' &&
+                                styles.backgroundColor === 'rgb(255, 255, 255)';
+
+                document.body.removeChild(testElement);
+
+                if (isLoaded) {
+                    resolve();
+                } else {
+                    let attempts = 0;
+                    const maxAttempts = 30;
+                    const checkInterval = setInterval(() => {
+                        attempts++;
+                        const testEl = document.createElement('div');
+                        testEl.className = 'flex bg-white';
+                        testEl.style.position = 'absolute';
+                        testEl.style.visibility = 'hidden';
+                        document.body.appendChild(testEl);
+
+                        const isNowLoaded = window.getComputedStyle(testEl).display === 'flex';
+                        document.body.removeChild(testEl);
+
+                        if (isNowLoaded || attempts >= maxAttempts) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                }
+            });
+        }
+
+        // 显示表单页面
+        function showFormPage() {
+            const loader = document.getElementById('formLoader');
+            const body = document.body;
+
+            body.classList.add('form-loaded');
+
+            if (loader) {
+                loader.classList.add('hide');
+                setTimeout(() => {
+                    loader.remove();
+                }, 300);
+            }
+        }
+
+        // 页面加载完成后执行
+        window.addEventListener('DOMContentLoaded', async function() {
+            await checkFormCSSLoaded();
+            showFormPage();
+
+            // 表单验证
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const name = form.name.value.trim();
+                const location = form.location.value.trim();
+                const country = form.country.value.trim();
+                const price = form.price.value;
+
+                if (!name || !location || !country || !price) {
+                    e.preventDefault();
+                    alert('请填写所有必填字段（房源名称、地区、国家、价格）');
+                    return false;
+                }
+
+                if (parseFloat(price) <= 0) {
+                    e.preventDefault();
+                    alert('价格必须大于0');
+                    return false;
+                }
+            });
+
+            // 文件上传处理
+            setupFileUpload();
+
+            // 初始化设施选择（编辑模式）
+            initializeFacilities();
+        });
+
+        // 初始化设施、交通和周边环境选择
+        function initializeFacilities() {
+            {% if property and property.extra_info %}
+            try {
+                const extraInfo = {{ property.extra_info | safe }};
+
+                // 初始化设施
+                if (extraInfo.facilities && Array.isArray(extraInfo.facilities)) {
+                    // 设施映射表（与后端保持一致）
+                    const facilityMapping = {
+                        '免费WiFi': 'wifi',
+                        '电视': 'tv',
+                        '停车位': 'parking',
+                        '空调': 'air_conditioning',
+                        '暖气': 'heating',
+                        '厨房': 'kitchen',
+                        '冰箱': 'refrigerator',
+                        '微波炉': 'microwave',
+                        '洗衣机': 'washing_machine',
+                        '洗碗机': 'dishwasher',
+                        '健身房': 'gym',
+                        '游泳池': 'pool',
+                        '电梯': 'elevator',
+                        '24小时安保': 'security',
+                        '允许宠物': 'pets_allowed'
+                    };
+
+                    const customFacilities = [];
+
+                    extraInfo.facilities.forEach(facility => {
+                        if (facility.label && facilityMapping[facility.label]) {
+                            // 标准设施，勾选对应的复选框
+                            const checkbox = document.querySelector(`input[name="facilities"][value="${facilityMapping[facility.label]}"]`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                            }
+                        } else if (facility.label) {
+                            // 自定义设施
+                            customFacilities.push(facility.label);
+                        }
+                    });
+
+                    // 设置自定义设施
+                    if (customFacilities.length > 0) {
+                        const customInput = document.querySelector('input[name="custom_facilities"]');
+                        if (customInput) {
+                            customInput.value = customFacilities.join(', ');
+                        }
+                    }
+                }
+
+                // 初始化交通信息
+                if (extraInfo.traffic && Array.isArray(extraInfo.traffic)) {
+                    const trafficMapping = {
+                        '附近公交站': 'bus',
+                        '地铁站': 'subway',
+                        '出租车站': 'taxi',
+                        '共享单车': 'bike',
+                        '机场巴士': 'airport'
+                    };
+
+                    const customTraffic = [];
+
+                    extraInfo.traffic.forEach(traffic => {
+                        if (traffic.label && trafficMapping[traffic.label]) {
+                            // 标准交通，勾选对应的复选框
+                            const checkbox = document.querySelector(`input[name="traffic"][value="${trafficMapping[traffic.label]}"]`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                            }
+                        } else if (traffic.label) {
+                            // 自定义交通
+                            customTraffic.push(traffic.label);
+                        }
+                    });
+
+                    // 设置自定义交通
+                    if (customTraffic.length > 0) {
+                        const customInput = document.querySelector('input[name="custom_traffic"]');
+                        if (customInput) {
+                            customInput.value = customTraffic.join(', ');
+                        }
+                    }
+                }
+
+                // 初始化周边环境
+                if (extraInfo.surroundings && Array.isArray(extraInfo.surroundings)) {
+                    const surroundingsMapping = {
+                        '附近超市': 'supermarket',
+                        '购物中心': 'mall',
+                        '餐厅': 'restaurant',
+                        '学校': 'school',
+                        '医院': 'hospital',
+                        '图书馆': 'library',
+                        '公园': 'park',
+                        '健身房': 'gym',
+                        '电影院': 'cinema'
+                    };
+
+                    const customSurroundings = [];
+
+                    extraInfo.surroundings.forEach(surrounding => {
+                        if (surrounding.label && surroundingsMapping[surrounding.label]) {
+                            // 标准周边环境，勾选对应的复选框
+                            const checkbox = document.querySelector(`input[name="surroundings"][value="${surroundingsMapping[surrounding.label]}"]`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                            }
+                        } else if (surrounding.label) {
+                            // 自定义周边环境
+                            customSurroundings.push(surrounding.label);
+                        }
+                    });
+
+                    // 设置自定义周边环境
+                    if (customSurroundings.length > 0) {
+                        const customInput = document.querySelector('input[name="custom_surroundings"]');
+                        if (customInput) {
+                            customInput.value = customSurroundings.join(', ');
+                        }
+                    }
+                }
+
+                // 设置视频链接
+                if (extraInfo.video) {
+                    const videoInput = document.querySelector('input[name="video"]');
+                    if (videoInput) {
+                        videoInput.value = extraInfo.video;
+                    }
+                }
+            } catch (e) {
+                console.error('解析房源设施数据失败:', e);
+            }
+            {% endif %}
+        }
+
+        // 文件上传功能
+        function setupFileUpload() {
+            const imageUpload = document.getElementById('imageUpload');
+            const videoUpload = document.getElementById('videoUpload');
+            const imageDropZone = document.getElementById('imageDropZone');
+            const videoDropZone = document.getElementById('videoDropZone');
+            const imagePreview = document.getElementById('imagePreview');
+            const videoPreview = document.getElementById('videoPreview');
+
+            // 图片上传处理
+            imageUpload.addEventListener('change', function(e) {
+                handleImageFiles(e.target.files);
+            });
+
+            // 视频上传处理
+            videoUpload.addEventListener('change', function(e) {
+                handleVideoFiles(e.target.files);
+            });
+
+            // 拖拽功能
+            setupDragAndDrop(imageDropZone, handleImageFiles);
+            setupDragAndDrop(videoDropZone, handleVideoFiles);
+        }
+
+        // 存储已选择的文件
+        let selectedImageFiles = [];
+        let selectedVideoFiles = [];
+
+        // 处理图片文件
+        function handleImageFiles(files) {
+            const imagePreview = document.getElementById('imagePreview');
+            const imageUpload = document.getElementById('imageUpload');
+
+            // 将新文件添加到已选择的文件列表中
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    selectedImageFiles.push(file);
+                }
+            });
+
+            // 更新文件输入的files属性
+            updateFileInput(imageUpload, selectedImageFiles);
+
+            // 重新渲染预览
+            renderImagePreview();
+        }
+
+        // 渲染图片预览
+        function renderImagePreview() {
+            const imagePreview = document.getElementById('imagePreview');
+            imagePreview.innerHTML = '';
+
+            if (selectedImageFiles.length > 0) {
+                imagePreview.classList.remove('hidden');
+
+                selectedImageFiles.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const div = document.createElement('div');
+                        div.className = 'relative';
+                        div.innerHTML = `
+                            <img src="${e.target.result}" alt="预览图片 ${index + 1}"
+                                 class="w-full h-32 object-cover rounded-lg border">
+                            <div class="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                                ${file.name}
+                            </div>
+                            <button type="button" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600" onclick="removeImageFile(${index})">
+                                ×
+                            </button>
+                        `;
+                        imagePreview.appendChild(div);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                imagePreview.classList.add('hidden');
+            }
+        }
+
+        // 移除图片文件
+        function removeImageFile(index) {
+            selectedImageFiles.splice(index, 1);
+            const imageUpload = document.getElementById('imageUpload');
+            updateFileInput(imageUpload, selectedImageFiles);
+            renderImagePreview();
+        }
+
+        // 更新文件输入的files属性
+        function updateFileInput(input, files) {
+            const dt = new DataTransfer();
+            files.forEach(file => dt.items.add(file));
+            input.files = dt.files;
+        }
+
+        // 处理视频文件
+        function handleVideoFiles(files) {
+            const videoPreview = document.getElementById('videoPreview');
+            const videoUpload = document.getElementById('videoUpload');
+
+            // 将新文件添加到已选择的文件列表中
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('video/')) {
+                    selectedVideoFiles.push(file);
+                }
+            });
+
+            // 更新文件输入的files属性
+            updateFileInput(videoUpload, selectedVideoFiles);
+
+            // 重新渲染预览
+            renderVideoPreview();
+        }
+
+        // 渲染视频预览
+        function renderVideoPreview() {
+            const videoPreview = document.getElementById('videoPreview');
+            videoPreview.innerHTML = '';
+
+            if (selectedVideoFiles.length > 0) {
+                videoPreview.classList.remove('hidden');
+
+                selectedVideoFiles.forEach((file, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center p-4 bg-gray-50 rounded-lg border';
+                    div.innerHTML = `
+                        <i class="fas fa-video text-2xl text-indigo-600 mr-4"></i>
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-900">${file.name}</p>
+                            <p class="text-sm text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <button type="button" class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 ml-2" onclick="removeVideoFile(${index})">
+                            ×
+                        </button>
+                    `;
+                    videoPreview.appendChild(div);
+                });
+            } else {
+                videoPreview.classList.add('hidden');
+            }
+        }
+
+        // 移除视频文件
+        function removeVideoFile(index) {
+            selectedVideoFiles.splice(index, 1);
+            const videoUpload = document.getElementById('videoUpload');
+            updateFileInput(videoUpload, selectedVideoFiles);
+            renderVideoPreview();
+        }
+
+        // 设置拖拽功能
+        function setupDragAndDrop(dropZone, handleFiles) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) {
+                dropZone.classList.add('border-indigo-500', 'bg-indigo-50');
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+            }
+
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+        }
+    </script>
+</body>
+</html> 
