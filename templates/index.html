@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniHome - 国际学生租房平台</title>
-    <!-- 简化的CSS资源加载 -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css">
+    <!-- 本地CSS资源加载 -->
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/swiper-bundle.min.css">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
     /* 简化样式，移除加载动画 */
@@ -221,6 +221,27 @@
       text-shadow: 0 2px 12px rgba(255,255,255,0.7), 0 2px 8px rgba(0,0,0,0.18);
       -webkit-text-stroke: 1px #fff;
     }
+
+    /* Font Awesome 图标备用样式 */
+    .fa-globe::before { content: "🌐"; }
+    .fa-heart::before { content: "❤️"; }
+    .fa-user-circle::before { content: "👤"; }
+    .fa-home::before { content: "🏠"; }
+    .fa-chevron-left::before { content: "‹"; }
+    .fa-chevron-right::before { content: "›"; }
+    .fa-video::before { content: "📹"; }
+    .fa-envelope::before { content: "✉️"; }
+    .fa-phone-alt::before { content: "📞"; }
+    .fa-map-marker-alt::before { content: "📍"; }
+    .fa-weixin::before {
+        content: "W";
+        background: #07C160;
+        color: white;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-weight: bold;
+        font-size: 0.8em;
+    }
     /* 副标题/描述：白色+阴影 */
     .home-hero-subtitle, .home-hero-desc {
       color: #fff !important;
@@ -282,11 +303,11 @@
                         </button>
                     </div>
                     <div class="hidden md:ml-4 md:flex-shrink-0 md:flex md:items-center md:space-x-2">
-                        <button class="bg-indigo-600 p-1 rounded-full text-white hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <button class="bg-indigo-600 hover:bg-indigo-700 w-10 h-10 rounded-full text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 flex items-center justify-center">
                             <span class="sr-only">切换语言</span>
                             <i class="fas fa-globe text-xl"></i>
                         </button>
-                        <a href="/favorites" class="bg-red-500 hover:bg-red-600 p-1 rounded-full text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-200" title="我的收藏">
+                        <a href="/favorites" class="bg-indigo-600 hover:bg-indigo-700 w-10 h-10 rounded-full text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 flex items-center justify-center" title="我的收藏">
                             <span class="sr-only">我的收藏</span>
                             <i class="fas fa-heart text-xl"></i>
                         </a>
@@ -518,20 +539,7 @@
                         <span class="text-white text-xl font-bold">UniHome</span>
                     </div>
                     <p class="mt-2 text-sm text-gray-400">为国际学生提供优质的租房服务，让您的留学生活更加便捷。</p>
-                    <div class="mt-4 flex space-x-6">
-                        <a href="#" class="text-gray-400 hover:text-white">
-                            <i class="fab fa-facebook-f"></i>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-white">
-                            <i class="fab fa-twitter"></i>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-white">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-white">
-                            <i class="fab fa-weixin"></i>
-                        </a>
-                    </div>
+                    
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-gray-300 tracking-wider uppercase">快速链接</h3>
@@ -2134,6 +2142,6 @@
         }
     }
 </script>
-    <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
+    <script src="/static/js/swiper-bundle.min.js"></script>
 </body>
 </html>
