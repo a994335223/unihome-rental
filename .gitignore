@@ -47,3 +47,13 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Test files
+test_*.py
+test_*.xlsx
+test_*.csv
+bash.exe.stackdump
+
+# Excel exports (temporary)
+customer_favorites_*.xlsx
+客户收藏数据_*.xlsx

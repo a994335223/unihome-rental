@@ -2690,8 +2690,8 @@ def api_admin_customer_favorites():
                     'location': favorite.property.location,
                     'price': favorite.property.price,
                     'currency': favorite.property.currency,
-                    'price_unit': favorite.property.price_unit,
-                    'images': favorite.property.images[:1] if favorite.property.images else []  # 只返回第一张图片
+                    'property_type': favorite.property.property_type,
+                    'images': [img.path for img in favorite.property.images[:1]] if favorite.property.images else []  # 只返回第一张图片的路径
                 },
                 'created_at': favorite.created_at.isoformat() if favorite.created_at else None
             })
@@ -2872,31 +2872,42 @@ def api_admin_customer_favorites_export():
 
         favorites = query.all()
 
-        # 创建CSV内容
+        # 创建Excel文件
         import io
-        import csv
         from datetime import datetime as dt
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            from openpyxl.utils import get_column_letter
+        except ImportError:
+            # 如果没有安装openpyxl，回退到CSV格式
+            return create_csv_export(favorites)
 
-        output = io.StringIO()
-        writer = csv.writer(output)
+        # 创建工作簿和工作表
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "客户收藏数据"
 
-        # 写入表头
-        writer.writerow([
-            '收藏ID',
-            '客户姓名',
-            '客户邮箱',
-            '客户注册时间',
-            '房源名称',
-            '房源位置',
-            '房源价格',
-            '货币',
-            '价格单位',
-            '收藏时间'
-        ])
+        # 设置表头
+        headers = [
+            '收藏ID', '客户姓名', '客户邮箱', '客户注册时间',
+            '房源名称', '房源位置', '房源价格', '货币', '房屋类型', '收藏时间'
+        ]
+
+        # 写入表头并设置样式
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
 
         # 写入数据
-        for favorite in favorites:
-            writer.writerow([
+        for row, favorite in enumerate(favorites, 2):
+            data = [
                 favorite.id,
                 favorite.user.username,
                 favorite.user.email,
@@ -2905,24 +2916,55 @@ def api_admin_customer_favorites_export():
                 favorite.property.location,
                 favorite.property.price,
                 favorite.property.currency,
-                favorite.property.price_unit,
+                favorite.property.property_type or '未设置',
                 favorite.created_at.strftime('%Y-%m-%d %H:%M:%S') if favorite.created_at else ''
-            ])
+            ]
 
-        # 准备响应
+            for col, value in enumerate(data, 1):
+                cell = ws.cell(row=row, column=col, value=value)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = Border(
+                    left=Side(style='thin'), right=Side(style='thin'),
+                    top=Side(style='thin'), bottom=Side(style='thin')
+                )
+
+                # 为价格列设置数字格式
+                if col == 7:  # 价格列
+                    cell.number_format = '0.00'
+
+        # 自动调整列宽
+        for col in range(1, len(headers) + 1):
+            column_letter = get_column_letter(col)
+            max_length = 0
+            for row in ws[column_letter]:
+                try:
+                    if len(str(row.value)) > max_length:
+                        max_length = len(str(row.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 30)  # 最大宽度30
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # 保存到内存
+        output = io.BytesIO()
+        wb.save(output)
         output.seek(0)
-        csv_content = output.getvalue()
+        excel_content = output.getvalue()
         output.close()
 
         # 生成文件名
         timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'客户收藏数据_{timestamp}.csv'
+        filename = f'customer_favorites_{timestamp}.xlsx'
+        filename_utf8 = '客户收藏数据_' + timestamp + '.xlsx'
 
-        # 返回CSV文件
+        # 返回Excel文件
         from flask import make_response
-        response = make_response(csv_content)
-        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        import urllib.parse
+        response = make_response(excel_content)
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        # 使用URL编码的中文文件名，同时提供ASCII备用文件名
+        encoded_filename = urllib.parse.quote(filename_utf8.encode('utf-8'))
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}'
 
         return response
 
@@ -2931,6 +2973,56 @@ def api_admin_customer_favorites_export():
             'success': False,
             'message': f'导出失败: {str(e)}'
         }), 500
+
+def create_csv_export(favorites):
+    """创建CSV格式的导出文件（openpyxl不可用时的回退方案）"""
+    import io
+    import csv
+    from datetime import datetime as dt
+    from flask import make_response
+    import urllib.parse
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # 写入表头
+    writer.writerow([
+        '收藏ID', '客户姓名', '客户邮箱', '客户注册时间',
+        '房源名称', '房源位置', '房源价格', '货币', '房屋类型', '收藏时间'
+    ])
+
+    # 写入数据
+    for favorite in favorites:
+        writer.writerow([
+            favorite.id,
+            favorite.user.username,
+            favorite.user.email,
+            favorite.user.created_at.strftime('%Y-%m-%d %H:%M:%S') if favorite.user.created_at else '',
+            favorite.property.name,
+            favorite.property.location,
+            favorite.property.price,
+            favorite.property.currency,
+            favorite.property.property_type or '未设置',
+            favorite.created_at.strftime('%Y-%m-%d %H:%M:%S') if favorite.created_at else ''
+        ])
+
+    # 准备响应
+    output.seek(0)
+    csv_content = output.getvalue()
+    output.close()
+
+    # 生成文件名
+    timestamp = dt.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'customer_favorites_{timestamp}.csv'
+    filename_utf8 = '客户收藏数据_' + timestamp + '.csv'
+
+    # 返回CSV文件
+    response = make_response(csv_content)
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    encoded_filename = urllib.parse.quote(filename_utf8.encode('utf-8'))
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}'
+
+    return response
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
